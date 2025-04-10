@@ -1,0 +1,26 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+USE_PROCD=1
+STOP=01
+
+reload_service() {
+	stop
+	start
+}
+
+service_triggers() {
+	procd_add_reload_trigger "campusnet"
+}
+
+start_service() {
+	local enabled=$(uci -q get campusnet.config.enabled)
+	if [ "$enabled" != "1" ]; then
+		return 0
+	fi
+
+	procd_open_instance
+	procd_set_param command /usr/bin/campusnet
+	procd_set_param respawn
+	procd_close_instance
+}

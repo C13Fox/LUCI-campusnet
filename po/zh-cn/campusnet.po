@@ -1,0 +1,33 @@
+msgid ""
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "Campus Network Auto Login"
+msgstr "校园网自动登录"
+
+msgid "Auto detect network environment and login to campus network"
+msgstr "自动检测网络环境并登录校园网"
+
+msgid "Basic Settings"
+msgstr "基本设置"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "Username"
+msgstr "用户名"
+
+msgid "Password"
+msgstr "密码"
+
+msgid "IP Address"
+msgstr "IP地址"
+
+msgid "Leave empty to auto detect"
+msgstr "留空将自动获取"
+
+msgid "MAC Address"
+msgstr "MAC地址"
+
+msgid "Check Interval (seconds)"
+msgstr "检测间隔（秒）"

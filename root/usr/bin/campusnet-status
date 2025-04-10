@@ -1,0 +1,77 @@
+#!/bin/sh
+
+# 日志函数
+log() {
+	echo "$(date "+%Y-%m-%d %H:%M:%S") [campusnet] $1"
+}
+
+# 获取当前网络状态
+get_network_status() {
+	log "检查网络连接状态..."
+
+	# 获取默认网关接口
+	local interface=$(ip route show default | awk '/default/ {print $5}')
+	if [ -z "$interface" ]; then
+		log "错误: 未找到默认网关接口"
+		return 1
+	fi
+
+	# 获取IP地址
+	local ip=$(ip addr show dev $interface | grep 'inet ' | awk '{print $2}' | cut -d/ -f1)
+	if [ -z "$ip" ]; then
+		log "错误: 未获取到IP地址"
+		return 1
+	fi
+
+	# 获取MAC地址
+	local mac=$(cat /sys/class/net/$interface/address | sed 's/://g')
+
+	log "网络接口: $interface"
+	log "IP地址: $ip"
+	log "MAC地址: $mac"
+
+	# 检查是否可以访问百度
+	if curl -s --connect-timeout 5 "http://www.baidu.com" > /dev/null 2>&1; then
+		log "互联网连接: 正常"
+		return 0
+	else
+		log "互联网连接: 异常"
+		
+		# 检查是否需要登录
+		if curl -s --connect-timeout 5 "http://10.17.8.18:801/eportal/portal/login" | grep -q "login"; then
+			log "校园网状态: 需要登录"
+		else
+			log "校园网状态: 未知错误"
+		fi
+		return 1
+	fi
+}
+
+# 显示配置信息
+show_config() {
+	local enabled=$(uci -q get campusnet.config.enabled)
+	local username=$(uci -q get campusnet.config.username)
+	local password=$(uci -q get campusnet.config.password | sed 's/./*/g')
+	local ip=$(uci -q get campusnet.config.ip)
+	local mac=$(uci -q get campusnet.config.mac)
+	local interval=$(uci -q get campusnet.config.interval)
+
+	log "校园网自动登录配置:"
+	log "启用状态: $([ "$enabled" = "1" ] && echo "已启用" || echo "未启用")"
+	log "用户名: $username"
+	log "密码: $password"
+	log "指定IP: ${ip:-自动获取}"
+	log "指定MAC: ${mac:-自动获取}"
+	log "检测间隔: ${interval:-60}秒"
+}
+
+# 主函数
+main() {
+	log "===== 校园网自动登录状态检查 ====="
+	show_config
+	log "===== 当前网络状态 ====="
+	get_network_status
+}
+
+# 执行主函数
+main

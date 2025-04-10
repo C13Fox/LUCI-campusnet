@@ -1,0 +1,84 @@
+#!/bin/sh
+
+# 配置文件路径
+CONFIG_FILE="/etc/config/campusnet"
+
+# 日志函数
+log() {
+	logger -t "campusnet" "$1"
+	echo "$(date "+%Y-%m-%d %H:%M:%S") [campusnet] $1"
+}
+
+# 检查网络连接
+check_network() {
+	# 尝试访问百度来检查网络连接
+	if curl -s --connect-timeout 5 "http://www.baidu.com" > /dev/null 2>&1; then
+		return 0  # 网络正常
+	else
+		return 1  # 网络异常
+	fi
+}
+
+# 检查是否需要登录
+check_need_login() {
+	# 尝试访问校园网登录页面
+	if curl -s --connect-timeout 5 "http://10.17.8.18:801/eportal/portal/login" | grep -q "login"; then
+		return 0  # 需要登录
+	else
+		return 1  # 不需要登录
+	fi
+}
+
+# 执行登录
+do_login() {
+	local username=$(uci -q get campusnet.config.username)
+	local password=$(uci -q get campusnet.config.password)
+	local ip=$(uci -q get campusnet.config.ip || curl -s ip.sb)
+	local mac=$(uci -q get campusnet.config.mac || cat /sys/class/net/$(ip route show default | awk '/default/ {print $5}')/address | sed 's/://g')
+
+	if [ -z "$username" ] || [ -z "$password" ]; then
+		log "错误: 用户名或密码未配置"
+		return 1
+	fi
+
+	# 构建登录URL
+	local encoded_username=$(echo -n "$username" | sed 's/@/%40/g')
+	local login_url="http://10.17.8.18:801/eportal/portal/login?callback=dr1003&login_method=1&user_account=${encoded_username}&user_password=${password}&wlan_user_ip=${ip}&wlan_user_mac=${mac}&wlan_ac_ip=10.17.4.1&terminal_type=1&lang=zh-cn&v=8194&lang=zh"
+
+	# 发送登录请求
+	local response=$(curl -s "$login_url")
+
+	# 检查登录结果
+	if echo "$response" | grep -q "success"; then
+		log "登录成功"
+		return 0
+	else
+		log "登录失败: $response"
+		return 1
+	fi
+}
+
+# 主循环
+main() {
+	log "校园网自动登录服务启动"
+
+	while true; do
+		# 检查网络连接
+		if ! check_network; then
+			log "网络连接异常，尝试登录"
+			
+			# 检查是否需要登录
+			if check_need_login; then
+				log "检测到需要登录，开始登录过程"
+				do_login
+			fi
+		fi
+
+		# 检查间隔时间
+		local interval=$(uci -q get campusnet.config.interval || echo 60)
+		sleep "$interval"
+	done
+}
+
+# 启动主循环
+main

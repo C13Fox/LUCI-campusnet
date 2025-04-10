@@ -1,0 +1,7 @@
+config campusnet 'config'
+	option enabled '0'
+	option username ''
+	option password ''
+	option ip ''
+	option mac ''
+	option interval '60'

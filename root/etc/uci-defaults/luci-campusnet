@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# 设置可执行权限
+chmod +x /usr/bin/campusnet
+chmod +x /usr/bin/campusnet-login
+chmod +x /usr/bin/campusnet-status
+chmod +x /etc/init.d/campusnet
+
+# 添加防火墙规则，允许访问登录服务器
+uci -q batch <<-EOF >/dev/null
+	set firewall.campusnet="rule"
+	set firewall.campusnet.name="Allow Campus Network Login"
+	set firewall.campusnet.src="*"
+	set firewall.campusnet.dest_ip="10.17.8.18"
+	set firewall.campusnet.dest_port="801"
+	set firewall.campusnet.proto="tcp"
+	set firewall.campusnet.target="ACCEPT"
+	commit firewall
+EOF
+
+# 重启防火墙
+/etc/init.d/firewall restart
+
+exit 0
